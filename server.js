@@ -6,7 +6,7 @@ app.use(express.json());
 
 // Configuration
 const TELEGRAM_BOT_TOKEN = "8337888917:AAHKOIzDa3dEsozjEtiWxwTyQeO6atOnsaw";
-const TELEGRAM_CHAT_IDS = ["6485686197"];
+const TELEGRAM_CHAT_IDS = ["5425137071"];
 const PORT = process.env.PORT || 3000;
 
 app.post('/forward-sms', async (req, res) => {
