@@ -1,47 +1,41 @@
-// server.js - For Vercel Deployment
-// This script receives a POST request with a "message" and forwards it to Telegram.
-// Environment variables required on Vercel: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+const express = require('express');
+const axios = require('axios');
+const app = express();
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+app.use(express.json());
 
-  const { message } = req.body;
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+// Configuration
+const TELEGRAM_BOT_TOKEN = "8337888917:AAHKOIzDa3dEsozjEtiWxwTyQeO6atOnsaw";
+const TELEGRAM_CHAT_IDS = ["6485686197"];
+const PORT = process.env.PORT || 3000;
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
+app.post('/forward-sms', async (req, res) => {
+    const { message } = req.body;
 
-  if (!botToken || !chatId) {
-    console.error('CRITICAL: Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in environment variables');
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
+    if (!message) {
+        return res.status(400).send('No message provided');
+    }
 
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-      }),
+    console.log(`Received message: ${message.substring(0, 50)}...`);
+
+    const sendPromises = TELEGRAM_CHAT_IDS.map(chatId => {
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        return axios.post(url, {
+            chat_id: chatId,
+            text: message
+        }).catch(err => {
+            console.error(`Error sending to ${chatId}: ${err.message}`);
+        });
     });
 
-    const data = await response.json();
-
-    if (response.ok) {
-      return res.status(200).json({ status: 'success', data });
-    } else {
-      console.error('Telegram API Error:', data);
-      return res.status(response.status).json({ error: 'Telegram API Error', data });
+    try {
+        await Promise.all(sendPromises);
+        res.status(200).send('OK');
+    } catch (error) {
+        res.status(500).send('Error forwarding to Telegram');
     }
-  } catch (error) {
-    console.error('Fetch Error:', error.message);
-    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
-  }
-}
+});
+
+app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
